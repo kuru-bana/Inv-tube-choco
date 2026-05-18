@@ -1845,6 +1845,7 @@ init();
 
 ;(() => {
   if (!document.body.classList.contains('page-playlist')) return;
+  if (document.body.classList.contains('page-mix')) return;
 const params = new URLSearchParams(location.search);
 const playlistId = params.get('list') || '';
 let currentPage = parseInt(params.get('page') || '1', 10);
