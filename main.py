@@ -241,7 +241,7 @@ async def version():
     return {"ver": "1.00"}
 
 
-LINKLIST_URL = "https://raw.githubusercontent.com/kuru-bana/Link-list/refs/heads/main/inv-tube.json"
+LINKLIST_URL = "https://raw.githubusercontent.com/kuru-bana/Link-list/refs/heads/main/choco-tube-plus.json"
 
 
 async def _check_one(url: str) -> dict:
