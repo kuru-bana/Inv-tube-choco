@@ -80,7 +80,7 @@
     const chAvatar = document.getElementById('sfChAvatar');
     const chName = document.getElementById('sfChName');
     if (titleEl) titleEl.textContent = data.title || '';
-    document.title = (data.title ? data.title + ' - ' : '') + 'Inv-tube Shorts';
+    document.title = (data.title ? data.title + ' - ' : '') + 'Choco-tube-plus Shorts';
     const parts = [];
     if (data.viewCount) parts.push(formatViews(data.viewCount) + ' 回視聴');
     if (data.publishedText) parts.push(data.publishedText);
