@@ -153,30 +153,46 @@ function setupQualities(formatStreams) {
   function setQuality(fmt) {
     const currentTime = player.currentTime;
     const wasPlaying = !player.paused;
+    const prevMode = streamOnlyMode;
+
+    if (prevMode === 'audio') {
+      // Switching quality while in audio mode → exit audio mode, go normal
+      streamOnlyMode = 'normal';
+      const _pw = document.getElementById('playerWrap');
+      if (_pw) _pw.classList.remove('stream-audio-only');
+      const _atb = document.getElementById('audioTrackBar');
+      if (_atb) _atb.setAttribute('hidden', '');
+      player.muted = volState.muted;
+    }
+    // If video-only mode: keep mode, keep muted — just change quality
+    lastNormalStreamSrc = fmt.url;
     player.src = fmt.url;
     player.currentTime = currentTime;
+    if (prevMode === 'video') player.muted = true;
     if (wasPlaying) player.play().catch(() => {});
     const label = fmt.qualityLabel || fmt.quality || '?';
-    qualityBtns.querySelectorAll('.quality-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.url === fmt.url);
-    });
     if (vcQualOpts) vcQualOpts.querySelectorAll('.vctrls-dd-opt').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.url === fmt.url);
     });
-    if (vcQualBtn) vcQualBtn.textContent = label;
+    // In video-only mode keep the "映像のみ" label in the overlay btn and keep track btn active
+    if (prevMode === 'video') {
+      document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="video"]').forEach(b => b.classList.add('active'));
+      document.querySelectorAll('#vcQualOpts .vctrls-dd-opt-track[data-track-mode="video"]').forEach(b => b.classList.add('active'));
+      if (vcQualBtn) vcQualBtn.textContent = '映像のみ';
+      // Deactivate all videoTrackBtns since quality changed back to muxed stream
+      const vtb = document.getElementById('videoTrackBtns');
+      if (vtb) vtb.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+    } else {
+      if (vcQualBtn) vcQualBtn.textContent = label;
+    }
     document.querySelectorAll('.vctrls-dd-wrap.dd-open').forEach(w => w.classList.remove('dd-open'));
   }
 
   sorted.forEach(fmt => {
     const label = fmt.qualityLabel || fmt.quality || '?';
 
-    const btn = document.createElement('button');
-    btn.className = 'quality-btn';
-    btn.textContent = label;
-    btn.dataset.url = fmt.url;
-    btn.addEventListener('click', () => setQuality(fmt));
-    qualityBtns.appendChild(btn);
-
+    // Quality buttons only go in the overlay dropdown, not the panel
+    // (the panel shows mode buttons: 通常 / 音声のみ / 映像のみ)
     if (vcQualOpts) {
       const opt = document.createElement('button');
       opt.className = 'vctrls-dd-opt';
@@ -200,6 +216,12 @@ let volState = (() => {
 })();
 let currentStreamData = null;
 let currentVideoMeta = null;
+let currentVideoId = '';
+let streamOnlyMode = 'normal'; // 'normal' | 'audio' | 'video'
+let streamBestAudioUrl = '';
+let streamAudioFormats = [];
+let streamVideoFormats = [];
+let lastNormalStreamSrc = '';
 let cachedInvInstance = null;
 
 function isPlaybackModeActive(modeId) {
@@ -330,6 +352,13 @@ function initHQMode(streamData) {
     .filter(f => f.type && f.type.startsWith('audio/'))
     .sort((a, b) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0));
 
+  if (audioFormats.length > 0) {
+    streamBestAudioUrl = audioFormats[0].url;
+    streamAudioFormats = audioFormats;
+  }
+
+  streamVideoFormats = videoFormats;
+
   const modeHQBtn = document.getElementById('modeHQ');
   if (videoFormats.length === 0 || audioFormats.length === 0) {
     if (modeHQBtn) modeHQBtn.disabled = true;
@@ -373,19 +402,15 @@ function initHQMode(streamData) {
 
   videoSelect.innerHTML = '';
   if (vcHQVidOpts) vcHQVidOpts.innerHTML = '';
-  let defaultVideoSet = false;
-  videoFormats.forEach(f => {
+  videoFormats.forEach((f, i) => {
     const fps = f.fps ? ` ${f.fps}fps` : '';
     const label = `${f.qualityLabel || '?'}${fps} [${encLabel(f)}]`;
 
     const opt = document.createElement('option');
     opt.value = f.url;
     opt.textContent = label;
+    if (i === 0) opt.selected = true; // always pick the best (sorted highest first)
     videoSelect.appendChild(opt);
-    if (!defaultVideoSet && encLabel(f) === 'H.264') {
-      opt.selected = true;
-      defaultVideoSet = true;
-    }
 
     if (vcHQVidOpts) {
       const btn = document.createElement('button');
@@ -515,7 +540,16 @@ function initModeBar(videoId) {
   modeHQ.addEventListener('click', () => {
     if (modeHQ.classList.contains('active')) return;
     const ct = player.currentTime;
-    lastStreamSrc = player.src;
+    lastStreamSrc = (streamOnlyMode === 'audio' && lastNormalStreamSrc) ? lastNormalStreamSrc : player.src;
+    if (streamOnlyMode !== 'normal') {
+      streamOnlyMode = 'normal';
+      const _pw = document.getElementById('playerWrap');
+      if (_pw) _pw.classList.remove('stream-audio-only');
+      const _atb = document.getElementById('audioTrackBar');
+      if (_atb) _atb.setAttribute('hidden', '');
+      const _vtb = document.getElementById('videoTrackBar');
+      if (_vtb) _vtb.setAttribute('hidden', '');
+    }
     modeHQ.classList.add('active');
     modeStream.classList.remove('active');
     modeNocookie.classList.remove('active');
@@ -681,8 +715,239 @@ async function tryAutoplay(videoEl, audioEl) {
   } catch (e) {}
 }
 
+function setupStreamOnlyBtns() {
+  const qualityBtns  = document.getElementById('qualityBtns');
+  const vcQualOpts   = document.getElementById('vcQualOpts');
+  const audioTrackBtns = document.getElementById('audioTrackBtns');
+  if (!qualityBtns) return;
+
+  // Remove previous track buttons
+  qualityBtns.querySelectorAll('.quality-btn-track').forEach(b => b.remove());
+  if (vcQualOpts) vcQualOpts.querySelectorAll('.vctrls-dd-opt-track').forEach(b => b.remove());
+
+  function addPanelBtn(label, mode) {
+    const btn = document.createElement('button');
+    btn.className = 'quality-btn quality-btn-track';
+    btn.textContent = label;
+    btn.dataset.trackMode = mode;
+    btn.addEventListener('click', () => switchStreamOnlyMode(mode));
+    qualityBtns.appendChild(btn);
+  }
+
+  function addOverlayOpt(label, mode) {
+    if (!vcQualOpts) return;
+    const opt = document.createElement('button');
+    opt.className = 'vctrls-dd-opt vctrls-dd-opt-track';
+    opt.textContent = label;
+    opt.dataset.trackMode = mode;
+    opt.addEventListener('click', () => {
+      switchStreamOnlyMode(mode);
+      document.querySelectorAll('.vctrls-dd-wrap.dd-open').forEach(w => w.classList.remove('dd-open'));
+    });
+    vcQualOpts.appendChild(opt);
+  }
+
+  // "通常" button — always first, active when in normal mode
+  addPanelBtn('通常', 'normal');
+  addOverlayOpt('通常', 'normal');
+  if (streamOnlyMode === 'normal') {
+    document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="normal"]').forEach(b => b.classList.add('active'));
+  }
+
+  if (streamBestAudioUrl) {
+    addPanelBtn('音声のみ', 'audio');
+    addOverlayOpt('音声のみ', 'audio');
+  }
+  addPanelBtn('映像のみ', 'video');
+  addOverlayOpt('映像のみ', 'video');
+
+  // Populate audio track quality buttons
+  if (audioTrackBtns) {
+    audioTrackBtns.innerHTML = '';
+    streamAudioFormats.forEach((f, i) => {
+      const kbps = f.bitrate ? `${Math.round(parseInt(f.bitrate) / 1000)}kbps` : '?';
+      const enc  = (f.encoding || f.container || '').toLowerCase();
+      const codec = enc.startsWith('opus') ? 'Opus' : enc.startsWith('mp4a') || enc === 'aac' ? 'AAC' : enc || '?';
+      const label = `${kbps} [${codec}]`;
+      const btn = document.createElement('button');
+      btn.className = 'quality-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = label;
+      btn.dataset.audioUrl = f.url;
+      btn.addEventListener('click', () => switchAudioTrack(f.url, audioTrackBtns));
+      audioTrackBtns.appendChild(btn);
+    });
+  }
+
+  // Populate video track quality buttons (adaptive video-only streams only)
+  const videoTrackBtns = document.getElementById('videoTrackBtns');
+  if (videoTrackBtns) {
+    videoTrackBtns.innerHTML = '';
+
+    // Adaptive video-only streams
+    streamVideoFormats.forEach(f => {
+      const height = (() => {
+        const fromLabel = parseInt(f.qualityLabel);
+        if (fromLabel) return fromLabel;
+        const m = (f.size || '').match(/x(\d+)/);
+        return m ? parseInt(m[1]) : 0;
+      })();
+      const enc = (f.encoding || '').toLowerCase();
+      let codec = enc.startsWith('av01') || enc.startsWith('av1') ? 'AV1'
+        : enc === 'vp9' ? 'VP9'
+        : enc === 'h264' || enc === 'avc1' ? 'H.264'
+        : f.container === 'webm' ? 'VP9'
+        : enc || f.container || '?';
+      const label = height ? `${height}p [${codec}]` : (f.qualityLabel || codec || '?');
+      const btn = document.createElement('button');
+      btn.className = 'quality-btn';
+      btn.textContent = label;
+      btn.dataset.videoUrl = f.url;
+      btn.addEventListener('click', () => switchVideoTrack(f.url, videoTrackBtns));
+      videoTrackBtns.appendChild(btn);
+    });
+  }
+}
+
+function switchStreamOnlyMode(mode) {
+  const player        = document.getElementById('videoPlayer');
+  const playerWrap    = document.getElementById('playerWrap');
+  const vcQualBtn     = document.getElementById('vcQualBtn');
+  const audioTrackBar = document.getElementById('audioTrackBar');
+  const videoTrackBar = document.getElementById('videoTrackBar');
+  if (!player || !playerWrap) return;
+
+  const ct         = player.currentTime;
+  const wasPlaying = !player.paused;
+  const prevMode   = streamOnlyMode;
+  streamOnlyMode   = mode;
+
+  document.querySelectorAll('#qualityBtns .quality-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#vcQualOpts .vctrls-dd-opt').forEach(b => b.classList.remove('active'));
+
+  if (mode === 'normal') {
+    playerWrap.classList.remove('stream-audio-only');
+    if (audioTrackBar) audioTrackBar.setAttribute('hidden', '');
+    if (videoTrackBar) videoTrackBar.setAttribute('hidden', '');
+    const restoreSrc = lastNormalStreamSrc || player.src;
+    if (prevMode === 'audio' || prevMode === 'video') {
+      player.src = restoreSrc;
+      player.currentTime = ct;
+    }
+    player.muted = volState.muted;
+    if (wasPlaying) player.play().catch(() => {});
+    // Mark the matching quality button active
+    const curSrc = player.src;
+    document.querySelectorAll('#qualityBtns .quality-btn:not(.quality-btn-track)').forEach(b => {
+      b.classList.toggle('active', b.dataset.url === curSrc);
+    });
+    document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="normal"]').forEach(b => b.classList.add('active'));
+    document.querySelectorAll('#vcQualOpts .vctrls-dd-opt-track[data-track-mode="normal"]').forEach(b => b.classList.add('active'));
+    const _vcQb = document.getElementById('vcQualBtn');
+    if (_vcQb) {
+      const activeQBtn = document.querySelector('#qualityBtns .quality-btn:not(.quality-btn-track).active');
+      _vcQb.textContent = activeQBtn ? activeQBtn.textContent : '画質';
+    }
+    return;
+
+  } else if (mode === 'audio') {
+    if (!streamBestAudioUrl) return;
+    if (prevMode !== 'audio') lastNormalStreamSrc = player.src;
+    // Set audio poster: try maxresdefault → hqdefault → player poster fallback
+    playerWrap.style.setProperty('--audio-poster', `url(${player.poster})`);
+    if (currentVideoId) {
+      const tryUrls = [
+        `https://i.ytimg.com/vi/${currentVideoId}/maxresdefault.jpg`,
+        `https://i.ytimg.com/vi/${currentVideoId}/hqdefault.jpg`,
+      ];
+      (function tryNext(i) {
+        if (i >= tryUrls.length) return;
+        const img = new Image();
+        img.onload = () => playerWrap.style.setProperty('--audio-poster', `url(${tryUrls[i]})`);
+        img.onerror = () => tryNext(i + 1);
+        img.src = tryUrls[i];
+      })(0);
+    }
+    playerWrap.classList.add('stream-audio-only');
+    if (audioTrackBar) audioTrackBar.removeAttribute('hidden');
+    if (videoTrackBar) videoTrackBar.setAttribute('hidden', '');
+    player.muted = false;
+    player.volume = volState.vol;
+    player.src = streamBestAudioUrl;
+    player.currentTime = ct;
+    if (wasPlaying) player.play().catch(() => {});
+    document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="audio"]').forEach(b => b.classList.add('active'));
+    document.querySelectorAll('#vcQualOpts .vctrls-dd-opt-track[data-track-mode="audio"]').forEach(b => b.classList.add('active'));
+    if (vcQualBtn) vcQualBtn.textContent = '音声のみ';
+
+  } else if (mode === 'video') {
+    playerWrap.classList.remove('stream-audio-only');
+    if (audioTrackBar) audioTrackBar.setAttribute('hidden', '');
+    if (videoTrackBar) videoTrackBar.removeAttribute('hidden');
+    if (prevMode === 'audio' && lastNormalStreamSrc) {
+      player.src = lastNormalStreamSrc;
+    }
+    player.muted = true;
+
+    // Auto-select the highest quality adaptive video stream
+    const vtb = document.getElementById('videoTrackBtns');
+    if (streamVideoFormats.length > 0) {
+      const best = streamVideoFormats[0];
+      player.src = best.url;
+      if (vtb) {
+        vtb.querySelectorAll('.quality-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.videoUrl === best.url);
+        });
+      }
+    } else {
+      if (vtb) vtb.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    player.currentTime = ct;
+    if (wasPlaying) player.play().catch(() => {});
+    document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="video"]').forEach(b => b.classList.add('active'));
+    document.querySelectorAll('#vcQualOpts .vctrls-dd-opt-track[data-track-mode="video"]').forEach(b => b.classList.add('active'));
+    if (vcQualBtn) vcQualBtn.textContent = '映像のみ';
+  }
+}
+
+function switchAudioTrack(url, container) {
+  if (!url || streamOnlyMode !== 'audio') return;
+  const player = document.getElementById('videoPlayer');
+  if (!player) return;
+  streamBestAudioUrl = url;
+  const ct = player.currentTime;
+  const wasPlaying = !player.paused;
+  player.src = url;
+  player.currentTime = ct;
+  if (wasPlaying) player.play().catch(() => {});
+  if (container) {
+    container.querySelectorAll('.quality-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.audioUrl === url);
+    });
+  }
+}
+
+function switchVideoTrack(url, container) {
+  if (streamOnlyMode !== 'video') return;
+  const player = document.getElementById('videoPlayer');
+  if (!player) return;
+  const ct = player.currentTime;
+  const wasPlaying = !player.paused;
+  if (!url) return;
+  player.src = url;
+  player.muted = true;
+  player.currentTime = ct;
+  if (wasPlaying) player.play().catch(() => {});
+  if (container) {
+    container.querySelectorAll('.quality-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.videoUrl === url);
+    });
+  }
+}
+
 function setupPlayer(streamData, videoId) {
   currentStreamData = streamData;
+  currentVideoId = videoId;
   const player = document.getElementById('videoPlayer');
   const skeleton = document.getElementById('playerSkeleton');
   const errorEl = document.getElementById('playerError');
@@ -708,6 +973,7 @@ function setupPlayer(streamData, videoId) {
     const bestFormat = setupQualities(formats);
     if (!bestFormat) return;
 
+    lastNormalStreamSrc = bestFormat.url;
     player.src = bestFormat.url;
     skeleton.hidden = true;
 
@@ -717,8 +983,8 @@ function setupPlayer(streamData, videoId) {
       const firstOpt = document.querySelector('#vcQualOpts .vctrls-dd-opt');
       if (firstOpt) firstOpt.classList.add('active');
     }
-    const firstPanelBtn = document.querySelector('#qualityBtns .quality-btn');
-    if (firstPanelBtn) firstPanelBtn.classList.add('active');
+    // Mark "通常" as active (no individual quality buttons in panel anymore)
+    document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="normal"]').forEach(b => b.classList.add('active'));
 
     const setOvMode = document.getElementById('vcQualWrap');
     if (setOvMode) setOvMode.removeAttribute('hidden');
@@ -739,6 +1005,7 @@ function setupPlayer(streamData, videoId) {
   }
 
   initHQMode(streamData);
+  setupStreamOnlyBtns();
 }
 
 function formatDescription(rawHtml, rawText) {
@@ -1146,7 +1413,7 @@ function initDownloadBtn(videoId, meta) {
 
 function renderVideoInfo(meta, videoId) {
   currentVideoMeta = meta;
-  document.title = `${meta.title || '動画'} - Inv-tube`;
+  document.title = `${meta.title || '動画'} - Choco-tube-plus`;
 
   document.getElementById('infoSkeleton').hidden = true;
   const infoEl = document.getElementById('videoInfo');
@@ -1738,6 +2005,17 @@ async function reloadAll(videoId) {
   streamExcludeList = [];
   streamAltBarReady = false;
   lastStreamSrc = '';
+  lastNormalStreamSrc = '';
+  streamOnlyMode = 'normal';
+  streamBestAudioUrl = '';
+  streamAudioFormats = [];
+  streamVideoFormats = [];
+  const _resetPw = document.getElementById('playerWrap');
+  if (_resetPw) _resetPw.classList.remove('stream-audio-only');
+  const _resetAtb = document.getElementById('audioTrackBar');
+  if (_resetAtb) _resetAtb.setAttribute('hidden', '');
+  const _resetVtb = document.getElementById('videoTrackBar');
+  if (_resetVtb) _resetVtb.setAttribute('hidden', '');
   cachedInvInstance = null;
   setInstanceLabel(null);
   document.getElementById('streamAltBtn').setAttribute('hidden', '');
@@ -1885,20 +2163,29 @@ async function doStreamAlt(videoId) {
       }
     } else {
       setInstanceLabel(newInvInstance);
+      streamOnlyMode = 'normal';
+      const _dsPw = document.getElementById('playerWrap');
+      if (_dsPw) _dsPw.classList.remove('stream-audio-only');
+      const _dsAtb = document.getElementById('audioTrackBar');
+      if (_dsAtb) _dsAtb.setAttribute('hidden', '');
+      const _dsVtb = document.getElementById('videoTrackBar');
+      if (_dsVtb) _dsVtb.setAttribute('hidden', '');
       const bestFormat = setupQualities(formats);
       if (bestFormat) {
+        lastNormalStreamSrc = bestFormat.url;
         player.src = bestFormat.url;
+        player.muted = volState.muted;
         const vcQualBtn2 = document.getElementById('vcQualBtn');
         if (vcQualBtn2) vcQualBtn2.textContent = bestFormat.qualityLabel || bestFormat.quality || '画質';
         const firstOpt2 = document.querySelector('#vcQualOpts .vctrls-dd-opt');
         if (firstOpt2) firstOpt2.classList.add('active');
-        const firstPanelBtn2 = document.querySelector('#qualityBtns .quality-btn');
-        if (firstPanelBtn2) firstPanelBtn2.classList.add('active');
+        document.querySelectorAll('#qualityBtns .quality-btn-track[data-track-mode="normal"]').forEach(b => b.classList.add('active'));
         if (isStreamModeActive()) {
           player.removeAttribute('hidden');
           player.play().catch(() => {});
         }
       }
+      setupStreamOnlyBtns();
       if (status && isStreamModeActive()) {
         status.textContent = '読み込み完了';
         status.className = 'pc-alt-status stream-alt-ok';
