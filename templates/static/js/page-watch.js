@@ -1992,6 +1992,7 @@ async function initPlaylistPanel(playlistId, globalIndex) {
 }
 
 let streamExcludeList = [];
+let streamAltPool = null;
 let reloadAllInProgress = false;
 let streamAltBarReady = false;
 
@@ -2003,6 +2004,7 @@ async function reloadAll(videoId) {
   if (reloadAllBtn) reloadAllBtn.disabled = true;
 
   streamExcludeList = [];
+  streamAltPool = null;
   streamAltBarReady = false;
   lastStreamSrc = '';
   lastNormalStreamSrc = '';
@@ -2087,6 +2089,7 @@ async function reloadAll(videoId) {
     streamExcludeList = invInstance ? [invInstance] : [];
     cachedInvInstance = invInstance;
     streamAltBarReady = true;
+    prefetchAltStream(videoId, streamExcludeList);
     if (isStreamModeActive()) {
       document.getElementById('streamAltBtn').removeAttribute('hidden');
       setInstanceLabel(invInstance);
@@ -2123,6 +2126,14 @@ function setHQInstanceLabel(invInstance) {
   label.textContent = instanceHostname(invInstance);
 }
 
+function prefetchAltStream(videoId, excludeList) {
+  streamAltPool = null;
+  const excludeParam = excludeList.length
+    ? '?exclude=' + encodeURIComponent(excludeList.join(','))
+    : '';
+  streamAltPool = fetchStream(`/api/stream/${videoId}${excludeParam}`).catch(() => null);
+}
+
 async function doStreamAlt(videoId) {
   const btn = document.getElementById('streamAltBtn');
   const status = document.getElementById('streamAltStatus');
@@ -2132,15 +2143,29 @@ async function doStreamAlt(videoId) {
   if (status && shouldShowStatus()) { status.textContent = '読み込み中...'; status.className = 'pc-alt-status'; }
 
   try {
-    const excludeParam = streamExcludeList.length
-      ? '?exclude=' + encodeURIComponent(streamExcludeList.join(','))
-      : '';
-    const { data: newStreamData, instanceUrl: newInstance } = await fetchStream(`/api/stream/${videoId}${excludeParam}`);
+    let result = null;
+
+    if (streamAltPool) {
+      const pooled = streamAltPool;
+      streamAltPool = null;
+      result = await pooled;
+      if (!result || !(result.data?.formatStreams?.length)) result = null;
+    }
+
+    if (!result) {
+      const excludeParam = streamExcludeList.length
+        ? '?exclude=' + encodeURIComponent(streamExcludeList.join(','))
+        : '';
+      result = await fetchStream(`/api/stream/${videoId}${excludeParam}`);
+    }
+
+    const { data: newStreamData, instanceUrl: newInstance } = result;
 
     const newInvInstance = newInstance || newStreamData._invidious_instance || null;
     if (newInvInstance && !streamExcludeList.includes(newInvInstance)) {
       streamExcludeList.push(newInvInstance);
     }
+    prefetchAltStream(videoId, streamExcludeList);
 
     if (!isStreamModeActive()) return;
 
@@ -2686,6 +2711,7 @@ async function initWatch(videoId) {
     streamExcludeList = invInstance ? [invInstance] : [];
     cachedInvInstance = invInstance;
     streamAltBarReady = true;
+    prefetchAltStream(videoId, streamExcludeList);
     initStreamAltBtn(videoId);
 
     // Only show stream-specific UI if stream mode is currently active
