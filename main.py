@@ -18,17 +18,29 @@ category_cache: dict = {}
 http_client: httpx.AsyncClient = None
 
 
+_CLIENT_TIMEOUT = httpx.Timeout(connect=5.0, read=18.0, write=5.0, pool=5.0)
+_CLIENT_LIMITS = httpx.Limits(max_keepalive_connections=20, keepalive_expiry=30.0)
+
+
 async def get_client() -> httpx.AsyncClient:
     global http_client
     if http_client is None or http_client.is_closed:
-        http_client = httpx.AsyncClient(timeout=10, follow_redirects=True)
+        http_client = httpx.AsyncClient(
+            timeout=_CLIENT_TIMEOUT,
+            limits=_CLIENT_LIMITS,
+            follow_redirects=True,
+        )
     return http_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
-    http_client = httpx.AsyncClient(timeout=10, follow_redirects=True)
+    http_client = httpx.AsyncClient(
+        timeout=_CLIENT_TIMEOUT,
+        limits=_CLIENT_LIMITS,
+        follow_redirects=True,
+    )
     yield
     await http_client.aclose()
 
@@ -62,11 +74,20 @@ async def get_instances(category: str) -> list:
     return instances
 
 
+_RETRYABLE = (httpx.RemoteProtocolError, httpx.LocalProtocolError, httpx.ConnectError)
+
+
 async def _try_instance(base: str, invidious_path: str) -> dict:
     client = await get_client()
-    resp = await client.get(base + invidious_path)
-    resp.raise_for_status()
-    return {"data": resp.json(), "used_instance": base}
+    for attempt in range(2):
+        try:
+            resp = await client.get(base + invidious_path)
+            resp.raise_for_status()
+            return {"data": resp.json(), "used_instance": base}
+        except _RETRYABLE:
+            if attempt == 0:
+                continue
+            raise
 
 
 def _has_valid_videos(data) -> bool:
@@ -280,7 +301,8 @@ async def proxy_parallel(category: str, invidious_path: str, exclude_list: list 
                     elif winner is None:
                         winner = result
                 else:
-                    errors.append(str(exc))
+                    msg = str(exc) or type(exc).__name__
+                    errors.append(f"{base}:{msg}")
             if winner is not None:
                 break
     finally:
@@ -381,11 +403,18 @@ async def proxy_main(path: str, request: Request):
         else:
             innertube_task = asyncio.create_task(fetch_innertube_videos(channel_id, tab))
 
-        results = await asyncio.gather(invidious_task, innertube_task, return_exceptions=True)
-        inv_result, innertube_result = results[0], results[1]
-
-        if isinstance(innertube_result, Exception):
+        # Cap innertube at 8s so a cold-start on Render never blocks the response
+        innertube_result = ([], None)
+        try:
+            innertube_result = await asyncio.wait_for(innertube_task, timeout=8.0)
+        except (asyncio.TimeoutError, Exception):
             innertube_result = ([], None)
+
+        try:
+            inv_result = await invidious_task
+        except Exception as e:
+            inv_result = e
+
         innertube_items, new_innertube_cont_key = innertube_result if isinstance(innertube_result, tuple) else (innertube_result, None)
 
         if isinstance(inv_result, Exception):
