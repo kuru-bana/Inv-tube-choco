@@ -607,23 +607,14 @@ function initModeBar(videoId) {
   const eduSelect   = document.getElementById('eduParamSelect');
   const eduStatus   = document.getElementById('eduStatus');
 
-  const EDU_KEYS = [
-    { label: 'choco-1', url: 'https://raw.githubusercontent.com/choco-1515/About-youtube/refs/heads/main/edu/key1.json', key: 'choco-1' },
-    { label: 'choco-2', url: 'https://raw.githubusercontent.com/choco-1515/About-youtube/refs/heads/main/edu/key2.json', key: 'choco-2' },
-    { label: 'choco-3', url: 'https://raw.githubusercontent.com/choco-1515/About-youtube/refs/heads/main/edu/key3.json', key: 'choco-3' },
-  ];
-
   let eduParams = [];
 
   async function fetchEduParams() {
     try {
-      const results = await Promise.all(
-        EDU_KEYS.map(k => fetch(k.url).then(r => r.json()))
-      );
-      eduParams = results.map((json, i) => ({
-        label: EDU_KEYS[i].label,
-        value: json.value || '',
-      }));
+      const res = await fetch('/api/edu-params');
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('invalid');
+      eduParams = data;
       if (eduSelect) {
         eduSelect.innerHTML = '';
         eduParams.forEach((p, i) => {
@@ -1280,6 +1271,24 @@ function initFavBtn(videoId, meta) {
   };
 }
 
+function initShareBtn(videoId) {
+  const btn = document.getElementById('watchShareBtn');
+  const panel = document.getElementById('watchSharePanel');
+  if (!btn || !panel) return;
+  btn.removeAttribute('hidden');
+  if (btn.dataset.shareInit) return;
+  btn.dataset.shareInit = '1';
+  setupSharePanel(btn, panel, () => {
+    const vid = (new URLSearchParams(location.search)).get('v') || videoId;
+    return {
+      videoId: vid,
+      ytUrl: `https://www.youtube.com/watch?v=${vid}`,
+      appUrl: location.href,
+      title: document.title,
+    };
+  });
+}
+
 function initDownloadBtn(videoId, meta) {
   const btn = document.getElementById('watchDlBtn');
   const backdrop = document.getElementById('dlModalBackdrop');
@@ -1493,6 +1502,7 @@ function renderVideoInfo(meta, videoId) {
   }
 
   initWatchPlaylistBtn(videoId, meta);
+  initShareBtn(videoId);
   initDownloadBtn(videoId, meta);
   initFavBtn(videoId, meta);
 
