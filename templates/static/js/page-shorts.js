@@ -445,6 +445,24 @@
     queue = [{ videoId: startId, meta: null }];
     queueIdx = 0;
 
+    try {
+      const homeQueueRaw = sessionStorage.getItem('chHomeShortQueue');
+      if (homeQueueRaw) {
+        sessionStorage.removeItem('chHomeShortQueue');
+        const homeIds = JSON.parse(homeQueueRaw);
+        if (Array.isArray(homeIds) && homeIds.length > 1) {
+          const items = homeIds.map(id => ({ videoId: id, meta: null }));
+          const startIdx = items.findIndex(v => v.videoId === startId);
+          if (startIdx >= 0) {
+            queue = items;
+            queueIdx = startIdx;
+            channelMode = false;
+            searchMode = false;
+          }
+        }
+      }
+    } catch (_) {}
+
     document.getElementById('sfParamSelect')?.addEventListener('change', () => {
       if (queue[queueIdx]) loadPlayer(queue[queueIdx].videoId);
     });
