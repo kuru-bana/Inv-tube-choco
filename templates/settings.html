@@ -47,8 +47,34 @@
 
         <div class="settings-row">
           <div class="settings-row-info">
+            <div class="settings-row-label">自動再生</div>
+            <div class="settings-row-desc">動画を開いたとき自動で再生を開始します</div>
+          </div>
+          <label class="settings-toggle">
+            <input type="checkbox" id="autoplayToggle" />
+            <span class="settings-toggle-track">
+              <span class="settings-toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">次の動画へ自動送り</div>
+            <div class="settings-row-desc">プレイリスト・ミックス再生中に動画が終わったら自動で次へ進みます。ループがオンのときは無効になります</div>
+          </div>
+          <label class="settings-toggle">
+            <input type="checkbox" id="autoplayNextToggle" />
+            <span class="settings-toggle-track">
+              <span class="settings-toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
             <div class="settings-row-label">ループ再生</div>
-            <div class="settings-row-desc">動画が終わったら同じ動画を繰り返し再生する</div>
+            <div class="settings-row-desc">動画が終わったら先頭から繰り返します。プレイリスト中は無効。オンにすると自動送りはオフになります</div>
           </div>
           <label class="settings-toggle">
             <input type="checkbox" id="loopToggle" />
@@ -60,11 +86,11 @@
 
         <div class="settings-row">
           <div class="settings-row-info">
-            <div class="settings-row-label">次の動画を自動再生</div>
-            <div class="settings-row-desc">動画が終わったら関連動画の先頭を自動で再生する（プレイリスト・ミックスは対象外）</div>
+            <div class="settings-row-label">再生位置を保存</div>
+            <div class="settings-row-desc">次に同じ動画を開いたとき、前回の続きから再生します（ストリームモードのみ）</div>
           </div>
           <label class="settings-toggle">
-            <input type="checkbox" id="autoplayNextToggle" />
+            <input type="checkbox" id="savePositionToggle" />
             <span class="settings-toggle-track">
               <span class="settings-toggle-thumb"></span>
             </span>
