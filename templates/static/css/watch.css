@@ -2172,3 +2172,208 @@ body.page-watch .dl-empty {
   padding: 2rem 0;
 }
 
+
+/* ── 再生設定アコーディオン ── */
+body.page-watch .playback-info-box {
+  margin: 0.5rem 0 0.2rem;
+  border: 1px solid var(--border, rgba(139,92,246,0.22));
+  border-radius: 10px;
+  background: rgba(13,8,40,0.6);
+  overflow: hidden;
+}
+body.page-watch .playback-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: none;
+  color: var(--text, #e2e8f0);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  text-align: left;
+  transition: background 0.15s;
+  letter-spacing: 0.01em;
+}
+body.page-watch .playback-info-header:hover {
+  background: rgba(139,92,246,0.07);
+}
+body.page-watch .playback-info-title { flex: 1; }
+body.page-watch .playback-info-toggle {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--accent-bright, #a78bfa);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+body.page-watch .playback-info-body {
+  padding: 0.9rem 1rem 1rem;
+  border-top: 1px solid var(--border, rgba(139,92,246,0.22));
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* ── 再生区間 (1行横並び) ── */
+body.page-watch .clip-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+body.page-watch .clip-field {
+  flex: 1 1 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+body.page-watch .clip-field-label {
+  font-size: 0.74rem;
+  color: var(--muted, #94a3b8);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+body.page-watch .clip-field-input {
+  width: 100%;
+  padding: 0.42rem 0.75rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(139,92,246,0.25);
+  border-radius: 6px;
+  color: var(--text, #e2e8f0);
+  font-size: 0.83rem;
+  outline: none;
+  transition: border-color 0.18s, background 0.18s;
+  box-sizing: border-box;
+}
+body.page-watch .clip-field-input::placeholder {
+  color: var(--muted, #94a3b8);
+  opacity: 0.6;
+}
+body.page-watch .clip-field-input:focus {
+  border-color: var(--accent-bright, #a78bfa);
+  background: rgba(139,92,246,0.08);
+}
+body.page-watch .clip-plus {
+  font-size: 1.1rem;
+  color: var(--accent-bright, #a78bfa);
+  flex-shrink: 0;
+  padding-bottom: 0.42rem;
+  line-height: 1;
+  align-self: flex-end;
+}
+body.page-watch .clip-range-error {
+  font-size: 0.69rem;
+  color: #f87171;
+  margin-top: 0.1rem;
+}
+body.page-watch .clip-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+body.page-watch .clip-apply-btn {
+  padding: 0.42rem 1.1rem;
+  border-radius: 6px;
+  background: var(--accent, #7c3aed);
+  border: none;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+body.page-watch .clip-apply-btn:hover { background: var(--accent-bright, #a78bfa); }
+body.page-watch .clip-apply-btn:disabled { opacity: 0.4; cursor: default; }
+body.page-watch .clip-clear-btn {
+  padding: 0.42rem 0.8rem;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: var(--muted, #94a3b8);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+body.page-watch .clip-clear-btn:hover { background: rgba(255,255,255,0.13); }
+body.page-watch .clip-active-label {
+  font-size: 0.74rem;
+  color: #a78bfa;
+  margin-top: -0.3rem;
+}
+
+/* ── トグル 1行横並び ── */
+body.page-watch .pb-toggles-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  flex-wrap: wrap;
+}
+body.page-watch .switch-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+body.page-watch .switch-label-row:hover {
+  background: rgba(139,92,246,0.08);
+}
+body.page-watch .switch-label-row.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+body.page-watch .pb-toggle-label {
+  font-size: 0.81rem;
+  color: var(--text, #e2e8f0);
+  white-space: nowrap;
+}
+body.page-watch .switch-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 38px;
+  height: 21px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255,255,255,0.16);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+body.page-watch .switch-btn[data-state="checked"] {
+  background: var(--accent-bright, #a78bfa);
+}
+body.page-watch .switch-thumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+body.page-watch .switch-thumb[data-state="checked"] {
+  transform: translateX(17px);
+}
+body.page-watch .pb-hint {
+  font-size: 0.71rem;
+  color: var(--muted, #94a3b8);
+  line-height: 1.5;
+  margin-top: -0.3rem;
+}
