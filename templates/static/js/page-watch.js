@@ -14,6 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── 再生位置の保存・取得ヘルパー ──
+const _POS_KEY_PREFIX = 'watch_pos_';
+function getSavedPosition(videoId) {
+  try { return parseFloat(localStorage.getItem(_POS_KEY_PREFIX + videoId) || '0') || 0; }
+  catch (e) { return 0; }
+}
+function savePosition(videoId, t) {
+  try { localStorage.setItem(_POS_KEY_PREFIX + videoId, String(t)); } catch (e) {}
+}
+function clearSavedPosition(videoId) {
+  try { localStorage.removeItem(_POS_KEY_PREFIX + videoId); } catch (e) {}
+}
+
 function showWatchError(msg, isHome) {
   const main = document.getElementById('watchMain');
   main.innerHTML = `
@@ -1965,6 +1978,8 @@ async function initTranscript(videoId) {
   const header = document.getElementById('transcriptHeader');
   const chevron = document.querySelector('.transcript-chevron');
   const langsEl = document.getElementById('transcriptLangs');
+
+  if (!section || !body) return;
 
   try {
     const data = await withRetry(() => fetchMain(`/api/captions/${videoId}`), 8);
