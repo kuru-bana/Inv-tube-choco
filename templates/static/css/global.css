@@ -819,6 +819,65 @@ main {
 
 .error-icon { font-size: 2.5rem; }
 
+/* ===== HEADER SHORTCUTS ===== */
+.header-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.header-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.18s, background 0.18s;
+  position: relative;
+}
+
+.header-shortcut:hover {
+  color: var(--accent-bright);
+  background: var(--surface);
+}
+
+.header-shortcut.active {
+  color: var(--accent-bright);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.header-shortcut::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2, #1e1e2e);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 200;
+}
+
+.header-shortcut:hover::after {
+  opacity: 1;
+}
+
+@media (max-width: 860px) {
+  .header-shortcuts { display: none; }
+}
+
 /* ===== HEADER NAV ===== */
 .header-nav {
   display: flex;
