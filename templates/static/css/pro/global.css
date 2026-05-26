@@ -876,3 +876,67 @@ button.primary:hover, .btn-primary:hover, .download-btn:hover, .submit-btn:hover
 @media (max-width: 600px) {
   .side-menu { width: 240px; }
 }
+
+/* ===== HOME HERO (Pro) ===== */
+.home-hero-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.home-hero-logo .logo-inv {
+  background: var(--gradient-choco);
+  box-shadow:
+    0 6px 24px rgba(139, 69, 19, 0.6),
+    inset 0 1px 0 rgba(255, 230, 200, 0.35),
+    inset 0 -2px 0 rgba(74, 40, 24, 0.4);
+}
+
+.home-hero-logo .logo-tube {
+  background: linear-gradient(180deg, #f5ead8 0%, #e8c9a0 60%, #d2691e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.home-hero-sub {
+  color: var(--muted);
+}
+
+.home-search-form {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: 999px;
+}
+
+.home-search-form:focus-within {
+  border-color: var(--accent-bright);
+  box-shadow: 0 0 28px var(--glow-purple), 0 0 10px var(--glow-cyan);
+}
+
+.home-search-btn {
+  background: var(--gradient-choco);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px -4px rgba(210, 105, 30, 0.5);
+}
+
+.home-search-btn:hover {
+  filter: brightness(1.1);
+  opacity: 1;
+}
+
+.home-section-title svg {
+  color: var(--accent-bright);
+  filter: drop-shadow(0 0 6px rgba(160, 82, 45, 0.8));
+}
+
+.recommend-empty-btn {
+  background: var(--gradient-choco);
+  box-shadow: 0 6px 20px -6px rgba(210, 105, 30, 0.55);
+}
+
+.recommend-empty-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  opacity: 1;
+}
