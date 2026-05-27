@@ -39,6 +39,21 @@ Ytdlp-Apiは今度追加していく予定
 - [@2A_exe様](https://github.com/c00lkimx01-creator)
   - UI切り替え時のCSS開発
 
+## 実装予定機能
+- rapid apiによるストリーム修得
+- 外部apiによるフォールバック
+- サムネイル画像(自サーバー,base64,その他画像プロキシ)
+- pipedの使用
+- サイト内トレンド
+- アクセス数チェッカー
+- ツール機能
+  - youtubeサイト
+  - proxy
+  - game
+  - そのた便利機能
+- node.js化
+- html化 <br>
+...など
 ## 主な機能
 
 ### 動画視聴
