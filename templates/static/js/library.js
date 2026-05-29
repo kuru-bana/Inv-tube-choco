@@ -264,6 +264,7 @@ function getSettings() {
     searchRegion: 'JP', searchSort: 'relevance', searchDate: '', searchDuration: '',
     searchType: 'all', searchFeatures: '',
     searchIncludeShorts: true, searchSuggestions: true,
+    thumbnailMode: 'proxy',
   };
   try { return { ...defaults, ...JSON.parse(localStorage.getItem(LIB_SETTINGS_KEY) || '{}') }; }
   catch { return defaults; }
